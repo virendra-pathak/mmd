@@ -8,7 +8,7 @@ import random
 
 import itertools as it
 
-path_to_million_song_dataset = "millionsongsubset_full.tar.gz"
+path_to_million_song_dataset = "G:\MS\TUM\courses\Mining Massive Datasets\\millionsongsubset_full.tar.gz"
 
 hash_vector = np.array([2**i for i in range(64)])
 
@@ -79,8 +79,8 @@ def hashing(band):
             hash_buckets[hash_value].append(j) 
     
     for bucket in hash_buckets.items():
-        if len(bucket) > 1:
-            candidate_pairs += len(bucket)
+        if len(bucket[1]) > 1:
+            candidate_pairs += len(bucket[1])
         
     find_exact_cosine_distance(hash_buckets)
 
