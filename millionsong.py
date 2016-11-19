@@ -4,25 +4,13 @@ import numpy as np
 from sklearn.preprocessing import normalize
 import time
 import random
+
 path_to_million_song_dataset = "millionsongsubset_full.tar.gz"
-#hash_vector = np.empty((20))
-#for i in range(20):
-#    hash_vector[i] = 2**i
 
 hash_vector = np.array([2**i for i in range(64)])
 
-print("hash vectore shape : ", hash_vector.shape)
-print ("hashx vector : ", hash_vector)
 
 duplicate_songs = dict()
-
-'''hash_buckets = np.empty((2**20))
-for i in range(2**20):
-    hash_buckets[i] = 0'''
-
-#hash_buckets = {i:0 for i in range(2**20)}
-
-#print("hash bucket shape : ", len(hash_buckets))
 
 #
 #   Returns a matrix which columns corresponds to a specific feature:
@@ -43,7 +31,7 @@ def extract_fields(features, dataframe, n):
         for feature in features:
             feature_data_matrix[i][col_index] = dataframe.iloc[i][feature]
             col_index += 1
-    print(feature_data_matrix)
+    #print(feature_data_matrix)
     
     # Is this correct?
     feature_data_matrix = normalize(feature_data_matrix, norm='l2', axis=0)
@@ -51,16 +39,14 @@ def extract_fields(features, dataframe, n):
 #
 #   Generates a "random" matrix
 #
-#   Not sure if this is what we looking for.
-#
 def generate_random_v(rows, cols):
-    seed = time.time()
-    v = np.empty((rows, cols))
-    random.seed(seed) 
+    #seed = time.time()
+    #v = np.empty((rows, cols))
+    v = np.random.choice([-1,1], (rows, cols))
+    '''random.seed(seed) 
     for i in range(rows):
         for j in range(cols):
-            v[i][j] = random.choice([-1, 1])
-    #print(v)
+            v[i][j] = random.choice([-1, 1])'''
     return v
     
 def banding(signature_matrix, num_bands, rows_in_band, num_RV):
@@ -103,29 +89,23 @@ def hashing(band):
         
     find_exact_cosine_distance(hash_buckets)
 
-
-    print("candidate pairs : " , candidate_pairs)
+    print("Candidate pairs on one band: " , candidate_pairs)
 
 def find_exact_cosine_distance(hash_buckets):
    
     for bucket in hash_buckets.items():
         i = 0
-        while i < len(bucket):
-            if len(bucket) > 2:
-                print("Bucket lenght: ", len(bucket), " hash_buckets:  ", len(hash_buckets))
+        while i < len(bucket[1]):
             if i not in duplicate_songs:
                 duplicate_songs[i] = set([])
            
             j = i + 1
-            while j < len(bucket):
+            while j < len(bucket[1]):
                 if j not in duplicate_songs[i]:
                     cosine_value = cosine_similarity(feature_data_matrix[i], feature_data_matrix[j]) 
                     
-                    #print("Value: ", cosine_value, " i: ", i, " j:", j)
-                    
                     if cosine_value < sigma: 
-                        duplicate_songs[i] |= [i]
-                        print("Found a smaller value")
+                        duplicate_songs[i].update([j]) #|= set([i])
 
                 j += 1
             i+=1
@@ -134,9 +114,9 @@ def cosine_similarity(song1, song2):
     mag1 = np.linalg.norm(song1)
     mag2 = np.linalg.norm(song2)
 
-    return 1 - np.dot(song1, song2)/(mag1*mag2)
+    cos_angle = np.dot(song1, song2)/(mag1*mag2)
 
-    #return 1 - np.arccos(angle)/np.pi
+    return 1 - cos_angle
 
 def getHashValue(local_song_signature):
     hashValue = 0
@@ -163,15 +143,15 @@ def find_duplicates(feature_data_matrix, r, b, sigma):
     #   Uncomment to show relations
     #   print("Showing relation_matrix: ")
     v = v.transpose()
-    print ("shape of RV matrix : ", v.shape)
-    RV_dimensions = v.shape;
+    #print ("shape of RV matrix : ", v.shape)
+    #RV_dimensions = v.shape;
     #signature_matrix = np.empty((dimensions[0], num_of_RV))
     
     signature_matrix = np.dot(feature_data_matrix, v)
     
     #   signature_matrix = np.dot(feature_data_matrix, v.transpose())
-    print(signature_matrix)
-    print("signature_matrix:s shape: ", signature_matrix.shape)
+    #print(signature_matrix)
+    #print("signature_matrix:s shape: ", signature_matrix.shape)
 
     #signatures = np.sign(signature_matrix).transpose()
     for i in range(signature_matrix.shape[0]):
@@ -180,22 +160,23 @@ def find_duplicates(feature_data_matrix, r, b, sigma):
                 signature_matrix[i][j] = 1
             else:
                 signature_matrix[i][j] = 0
-    print("Signatures output : ", signature_matrix.transpose())
     
+    #print("Signatures output : ", signature_matrix.transpose())
+    time1 = time.time()
     banding(signature_matrix.transpose(), b, r, num_of_RV)
+    time2 = time.time()
+    print("Time taken to run banding: ", time2 - time1)
+    
     return 0
 
-#find_duplicates(np.empty((1000000, 31)), 20, 3, 5)
+print("Extracting the tarfile")
 t = tarfile.open(path_to_million_song_dataset, "r:gz")
 members = t.getmembers()
-#for m in members:
-#    print(m.name)
-'''t.extract(members[7])
-df = pd.read_csv(members[7].name, sep='<SEP>', engine='python', header=None)
-print(df)'''
-#np.unique(df[0], return_counts=True)
+
+print("Extracting the summary")
 t.extract(members[5].name)
 summary = pd.HDFStore(members[5].name)
+
 print("Extracting the features...")
 time1 = time.time()
 feature_data_matrix = extract_fields(['duration', 
@@ -206,15 +187,14 @@ feature_data_matrix = extract_fields(['duration',
                 'tempo',
                 'time_signature'], summary['analysis/songs'], 9999)
 sigma = 0.0006092
+
 time2 = time.time()
 print("Real time elapsed for extract fields: ", time2-time1)
+
 time1 = time.time()
 find_duplicates(feature_data_matrix, 64, 3, sigma)
 time2 = time.time()
+
 print("Time taken to find duplicates: ", time2-time1)
+print("Exits the program")
 t.close()
-#print("Type summary: ", type(summary['analysis/songs']))
-#print("Some field :", summary['analysis/songs'].iloc[0])
-#print("Type of summary field: ", type(summary['analysis/songs'].iloc[0]))
-#print("Duration field value: ", summary['analysis/songs'].iloc[0]['duration'])
-#print(summary['/analysis/songs'])
