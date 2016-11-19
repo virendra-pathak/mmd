@@ -2,13 +2,15 @@ import tarfile
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import normalize
+from sklearn.preprocessing import scale
 import time
 import random
+
+import itertools as it
 
 path_to_million_song_dataset = "millionsongsubset_full.tar.gz"
 
 hash_vector = np.array([2**i for i in range(64)])
-
 
 duplicate_songs = dict()
 
@@ -31,22 +33,16 @@ def extract_fields(features, dataframe, n):
         for feature in features:
             feature_data_matrix[i][col_index] = dataframe.iloc[i][feature]
             col_index += 1
-    #print(feature_data_matrix)
     
     # Is this correct?
-    feature_data_matrix = normalize(feature_data_matrix, norm='l2', axis=0)
+    #feature_data_matrix = normalize(feature_data_matrix, norm='l2', axis=0)
+    feature_data_matrix = scale(feature_data_matrix)
     return feature_data_matrix
 #
 #   Generates a "random" matrix
 #
 def generate_random_v(rows, cols):
-    #seed = time.time()
-    #v = np.empty((rows, cols))
     v = np.random.choice([-1,1], (rows, cols))
-    '''random.seed(seed) 
-    for i in range(rows):
-        for j in range(cols):
-            v[i][j] = random.choice([-1, 1])'''
     return v
     
 def banding(signature_matrix, num_bands, rows_in_band, num_RV):
@@ -64,9 +60,10 @@ def banding(signature_matrix, num_bands, rows_in_band, num_RV):
     duplicates = 0
     for song,similiarity_list in duplicate_songs.items():
         if len(similiarity_list) > 0:
-            duplicates += (len(similiarity_list) + 1)
+            duplicates += (len(similiarity_list))
+            #print("Duplicate pairs: ", song, " and ", similiarity_list)
 
-    print("We have found ", duplicates, " duplicates")
+    print("We have found ", duplicates, " duplicate pairs")
 
 def hashing(band):
     candidate_pairs = 0
@@ -75,11 +72,9 @@ def hashing(band):
     
     for j in range(band.shape[1]):
         local_song_signature = band[:, j]
-        #   print("local song signature shape before transpose: ", local_song_signature.shape)
         hash_value = getHashValue(local_song_signature)
-        #   print("hash value is: ", hashValue)
         if hash_value not in hash_buckets: 
-            hash_buckets[hash_value] = [j]#hash_buckets[hash_value] + 1
+            hash_buckets[hash_value] = [j]
         else:
             hash_buckets[hash_value].append(j) 
     
@@ -92,23 +87,17 @@ def hashing(band):
     print("Candidate pairs on one band: " , candidate_pairs)
 
 def find_exact_cosine_distance(hash_buckets):
-   
+  
     for bucket in hash_buckets.items():
-        i = 0
-        while i < len(bucket[1]):
+        for (i,j) in it.combinations(bucket[1], 2):
+
             if i not in duplicate_songs:
                 duplicate_songs[i] = set([])
-           
-            j = i + 1
-            while j < len(bucket[1]):
-                if j not in duplicate_songs[i]:
-                    cosine_value = cosine_similarity(feature_data_matrix[i], feature_data_matrix[j]) 
-                    
-                    if cosine_value < sigma: 
-                        duplicate_songs[i].update([j]) #|= set([i])
-
-                j += 1
-            i+=1
+             
+            if j not in duplicate_songs[i]:
+                cosine_value = cosine_similarity(feature_data_matrix[i], feature_data_matrix[j]) 
+                if cosine_value < sigma:
+                    duplicate_songs[i].update([j])
 
 def cosine_similarity(song1, song2):
     mag1 = np.linalg.norm(song1)
@@ -136,24 +125,11 @@ def find_duplicates(feature_data_matrix, r, b, sigma):
     print("Time taken to generate random V: ", time2-time1)
  
     print("Rank of matrix: ", np.linalg.matrix_rank(v))
-    #   Uncomment to show v
-    #print("Showing the v matrix: ")
-    #print(v)
     
-    #   Uncomment to show relations
-    #   print("Showing relation_matrix: ")
     v = v.transpose()
-    #print ("shape of RV matrix : ", v.shape)
-    #RV_dimensions = v.shape;
-    #signature_matrix = np.empty((dimensions[0], num_of_RV))
     
     signature_matrix = np.dot(feature_data_matrix, v)
     
-    #   signature_matrix = np.dot(feature_data_matrix, v.transpose())
-    #print(signature_matrix)
-    #print("signature_matrix:s shape: ", signature_matrix.shape)
-
-    #signatures = np.sign(signature_matrix).transpose()
     for i in range(signature_matrix.shape[0]):
         for j in range(signature_matrix.shape[1]):
             if signature_matrix[i][j] > 0:
@@ -161,11 +137,10 @@ def find_duplicates(feature_data_matrix, r, b, sigma):
             else:
                 signature_matrix[i][j] = 0
     
-    #print("Signatures output : ", signature_matrix.transpose())
     time1 = time.time()
     banding(signature_matrix.transpose(), b, r, num_of_RV)
     time2 = time.time()
-    print("Time taken to run banding: ", time2 - time1)
+    print("Time taken to find duplicates: ", time2 - time1)
     
     return 0
 
@@ -195,6 +170,6 @@ time1 = time.time()
 find_duplicates(feature_data_matrix, 64, 3, sigma)
 time2 = time.time()
 
-print("Time taken to find duplicates: ", time2-time1)
+print("Time taken to find duplicates with generation of random vectors and preprocessing of the data: ", time2-time1)
 print("Exits the program")
 t.close()
