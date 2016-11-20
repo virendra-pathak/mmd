@@ -31,10 +31,15 @@ def extract_fields(features, dataframe, n):
     for i in range(n):
         col_index = 0
         for feature in features:
-            feature_data_matrix[i][col_index] = dataframe.iloc[i][feature]
+            item = dataframe.iloc[i][feature]
+            if type(item) is str:
+                item = float(hash(item))
+            #print("Type ", type(dataframe.iloc[i][feature]))
+
+            #feature_data_matrix[i][col_index] = dataframe.iloc[i][feature]
+            feature_data_matrix[i][col_index] = item
             col_index += 1
     
-    # Is this correct?
     #feature_data_matrix = normalize(feature_data_matrix, norm='l2', axis=0)
     feature_data_matrix = scale(feature_data_matrix)
     return feature_data_matrix
@@ -160,16 +165,16 @@ feature_data_matrix = extract_fields(['duration',
                 'loudness', 
                 'mode', 'start_of_fade_out',
                 'tempo',
-                'time_signature'], summary['analysis/songs'], 9999)
+                'time_signature', 'track_id'], summary['analysis/songs'], 9999)
 sigma = 0.0006092
 
 time2 = time.time()
 print("Real time elapsed for extract fields: ", time2-time1)
 
-time1 = time.time()
+'''time1 = time.time()
 find_duplicates(feature_data_matrix, 64, 3, sigma)
 time2 = time.time()
 
 print("Time taken to find duplicates with generation of random vectors and preprocessing of the data: ", time2-time1)
 print("Exits the program")
-t.close()
+t.close()'''
