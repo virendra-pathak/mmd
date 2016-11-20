@@ -44,7 +44,19 @@ def extract_fields(features, dataframe, n):
 def generate_random_v(rows, cols):
     v = np.random.choice([-1,1], (rows, cols))
     return v
-    
+
+def naive_comparison(feature_data_matrix):
+    naive_duplicates  = 0
+    for i in range(feature_data_matrix.shape[0]-1):
+        j = i+1
+        while (j < feature_data_matrix.shape[0]):
+            cosine_value = cosine_similarity(feature_data_matrix[i], feature_data_matrix[j])
+            #   print("CV: ", cosine_value, " i: ", i, ",j: ", j)
+            if(cosine_value < sigma):
+                 naive_duplicates += 1
+            j += 1
+    print("Naive Duplicates: ", naive_duplicates)
+                
 def banding(signature_matrix, num_bands, rows_in_band, num_RV):
     band_start_index = 0
     band_end_index = rows_in_band - 1 
@@ -161,6 +173,13 @@ feature_data_matrix = extract_fields(['duration',
                 'mode', 'start_of_fade_out',
                 'tempo',
                 'time_signature'], summary['analysis/songs'], 9999)
+
+print("Doing Brute Force...")
+time1 = time.time()
+naive_comparison(feature_data_matrix)
+time2 = time.time()
+print("Time taken in Brute Force approach: ", time2-time1)
+
 sigma = 0.0006092
 
 time2 = time.time()
