@@ -60,7 +60,13 @@ def parse_triplets(file_path, max_rows, whole_dataset, b, use_vectors, use_dikt)
 
     return (users, songs, play_count)
 
-
+    
+def binning(play_count, bin_size):
+    bin_array = [2**i for i in range(bin_size)]
+    binned_counts = np.digitize(play_count, bin_array, right = True)
+    return binned_counts
+        
+    
 def cold_start(user_song_matrix, min_threshold):
     #We need to remove songs & users with less or equal to min_threshold 
     songs_per_user = np.ravel(np.sum(user_song_matrix, axis=1)) #sum of row
@@ -98,7 +104,14 @@ min_threshold = 5
 print("Parsing the triplets...")
 users, songs, play_count = parse_triplets(sys.argv[1], 300000, False, 10, True, False)
 
-# Here the logic for the binig should be placed
+# Here the logic for the binnig should be placed
+
+bin_size = 10 ## This is configurable by user
+binned_play_counts = binning(play_count, bin_size)
+
+# Either pass this binned_play_counts to the following functions that require play_count
+# as a parameter, or change the return variable "binned_play_counts" to "play_count"
+# to override its value
 
 # Easiest way to create a sparse matrix is done by using the vectors
 resulting_sparse_matrix = create_sparse_matrix(users, songs, play_count, row=True)
