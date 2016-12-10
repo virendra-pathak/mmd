@@ -63,7 +63,7 @@ def parse_triplets(file_path, max_rows, whole_dataset, b, use_vectors, use_dikt)
     
 def binning(play_count, bin_size):
     bin_array = [2**i for i in range(bin_size)]
-    binned_counts = np.digitize(play_count, bin_array, right = True)
+    binned_counts = np.digitize(play_count, bin_array, right = False)
     return binned_counts
         
     
