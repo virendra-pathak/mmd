@@ -77,7 +77,7 @@ def cold_start(user_song_matrix, min_threshold):
     #print(user_song_matrix.toarray())
         
     songs_per_user = np.ravel(np.sum(user_song_matrix, axis=1)) #sum of row
-    users_to_delete = np.where(songs_per_user < min_threshold)[0]
+    users_to_delete = np.where(songs_per_user <= min_threshold)[0]
     
     ##set the users i.e rows to 0
     for i in users_to_delete:
@@ -91,7 +91,7 @@ def cold_start(user_song_matrix, min_threshold):
     user_song_matrix = sp.csc_matrix(user_song_matrix)
     
     users_per_song = np.ravel(np.sum(user_song_matrix, axis=0)) #sum of column
-    songs_to_delete = np.where(users_per_song < min_threshold)[0]
+    songs_to_delete = np.where(users_per_song <= min_threshold)[0]
 
     for i in songs_to_delete:
             user_song_matrix.data[user_song_matrix.indptr[i]:user_song_matrix.indptr[i+1]]=0
@@ -141,7 +141,7 @@ while True:
 shape_final = resulting_sparse_matrix.shape
 
 # Initial P & Q values obtained using SVD
-P,Q = singular_value_decomp(resulting_sparse_matrix)
+# P,Q = singular_value_decomp(resulting_sparse_matrix)
 # Perform AO using P,Q
 
 print("Orig shape: ", shape_orig, " Final shape: ", shape_after)
