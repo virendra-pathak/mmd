@@ -1,9 +1,11 @@
 import re
 import numpy as np
 import scipy.sparse as sp
+import scipy.sparse.linalg as spl
 import sys
 import matplotlib.pyplot as plt
-
+import random
+import time
 
 # The sparse matrix function
 def create_sparse_matrix(users, songs, play_count, row=True):
@@ -106,26 +108,62 @@ def singular_value_decomp(sparse_matrix):
     sparse_matrix = sparse_matrix.asfptype()
     print("Matrix shape : ", sparse_matrix.shape)
     # print("Sparse Matrix : ", sparse_matrix)
-    U, sigma, Vt = sp.linalg.svds(sparse_matrix)
-    print("U shape : ", U.shape, " sigma shape : ", sigma.shape, " V shape : ", V.shape)
+    
+    U, sigma, Vt = spl.svds(sparse_matrix)
+    print("U shape : ", U.shape, " sigma shape : ", sigma.shape, " V shape : ", Vt.shape)
+    
     sigma = np.diag(sigma)
     print("Sigma shape after converting to diagonal matrix : ", sigma.shape)
+    
     P = U.dot(sigma)
     print("P shape : ", P.shape)
     return P, Vt
 
+#
+#   This functions picks a random set of size: number_of_random_elements
+#   
+#   Returns: M_s the modified M
+#            random_set containing all random pciked elements on the form [(row,col,data)]
+#
+def pick_random_test_set(M, number_of_random_elements):
+    random.seed(time.time())
+    
+    M_s = sp.coo_matrix(M)
+    interval = len(M_s.data)
+
+    random_picked_values = []
+    already_picked_values = []
+    
+    for i in range(number_of_random_elements):
+        random_index = random.randint(0, interval-1)
+
+        while random_index in already_picked_values:
+            random_index = random.randint(0, interval-1)
+        already_picked_values.append(random_index)
+        
+        random_picked_values.append((M_s.row[random_index], 
+                                    M_s.col[random_index], 
+                                    M_s.data[random_index]))
+        M_s.data[random_index] = 0
+        #print(random_picked_values[len(random_picked_values)-1])
+
+    M_s.eliminate_zeros()
+    M_s = sp.csr_matrix(M_s)
+    return M_s, random_picked_values
+    
 if len(sys.argv) < 2:
     print("To few arguments...")
     sys.exit(1)
 
 min_threshold = 5
+bin_size = 10 ## This is configurable by user
+size_of_test_set = 200
 
 print("Parsing the triplets...")
 users, songs, play_count = parse_triplets(sys.argv[1], 300000, False, 10, True, False)
 
 # Here the logic for the binnig should be placed
 
-bin_size = 10 ## This is configurable by user
 binned_play_counts = binning(play_count, bin_size)
 
 # Either pass this binned_play_counts to the following functions that require play_count
@@ -145,6 +183,11 @@ while True:
     if shape_before[0] == shape_after[0] and shape_before[1] == shape_after[1]:
         break
 shape_final = resulting_sparse_matrix.shape
+
+print("Picking random test set: ")
+resulting_sparse_matrix, test_set = pick_random_test_set(resulting_sparse_matrix, size_of_test_set)
+
+print("Got random test set: ", test_set)
 
 # Initial P & Q values obtained using SVD
 P, Q = singular_value_decomp(resulting_sparse_matrix)
