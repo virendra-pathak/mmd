@@ -114,10 +114,33 @@ def singular_value_decomp(sparse_matrix):
     
     sigma = np.diag(sigma)
     print("Sigma shape after converting to diagonal matrix : ", sigma.shape)
-    
-    P = U.dot(sigma)
-    print("P shape : ", P.shape)
-    return P, Vt
+    Q = U.dot(sigma)
+    print("Q shape : ", Q.shape)
+    print("Pt shape : ", Vt.shape)
+    return Q, Vt
+
+def Alternating_optimization(Q,Pt, user_song_matrix):
+
+    dot_sum = 0
+    Qt = np.transpose(Q)
+#==============================================================================
+#     row_vector= Q[0, :]
+#     column_vector = Q[:, 0]
+#     print(column_vector.shape[0])
+# 
+#     print("Row vector : ", row_vector)
+#     print("Col Vector : ", column_vector)
+#     
+#==============================================================================
+
+    print("Shape of Qt : ", Qt.shape)
+    #print("Q : ", Q, " and Qt : ", Qt)
+
+# have to impletement Minimize function
+#==============================================================================
+#     Q = minimize(Q, Pt, 0, dot_sum)
+#     Pt = minimize(Q, Pt, 1, dot_sum)
+#==============================================================================
 
 #
 #   This functions picks a random set of size: number_of_random_elements
@@ -190,8 +213,9 @@ resulting_sparse_matrix, test_set = pick_random_test_set(resulting_sparse_matrix
 print("Got random test set: ", test_set)
 
 # Initial P & Q values obtained using SVD
-P, Q = singular_value_decomp(resulting_sparse_matrix)
+Q, Pt = singular_value_decomp(resulting_sparse_matrix)
 # Perform AO using P,Q
+Alternating_optimization(Q,Pt, resulting_sparse_matrix)
 
 print("Orig shape: ", shape_orig, " Final shape: ", shape_after)
 sys.stdout.flush()
