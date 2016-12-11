@@ -107,7 +107,7 @@ def singular_value_decomp(sparse_matrix):
     print("Matrix shape : ", sparse_matrix.shape)
     # print("Sparse Matrix : ", sparse_matrix)
     U, sigma, Vt = sp.linalg.svds(sparse_matrix)
-    print("U shape : ", U.shape, " sigma shape : ", sigma.shape, " V shape : ", V.shape)
+    print("U shape : ", U.shape, " sigma shape : ", sigma.shape, " Vt shape : ", Vt.shape)
     sigma = np.diag(sigma)
     print("Sigma shape after converting to diagonal matrix : ", sigma.shape)
     P = U.dot(sigma)
