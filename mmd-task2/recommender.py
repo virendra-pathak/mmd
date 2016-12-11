@@ -63,12 +63,19 @@ def parse_triplets(file_path, max_rows, whole_dataset, b, use_vectors, use_dikt)
     
 def binning(play_count, bin_size):
     bin_array = [2**i for i in range(bin_size)]
+    print("Bin Array : ", bin_array)
     binned_counts = np.digitize(play_count, bin_array, right = False)
+    print("Binned Counts : ", binned_counts)
     return binned_counts
         
     
 def cold_start(user_song_matrix, min_threshold):
     #We need to remove songs & users with less or equal to min_threshold 
+    #print(user_song_matrix)
+    user_song_matrix = user_song_matrix > 0
+    user_song_matrix = user_song_matrix.astype(np.int)
+    #print(user_song_matrix.toarray())
+        
     songs_per_user = np.ravel(np.sum(user_song_matrix, axis=1)) #sum of row
     users_to_delete = np.where(songs_per_user < min_threshold)[0]
     
@@ -88,12 +95,18 @@ def cold_start(user_song_matrix, min_threshold):
 
     for i in songs_to_delete:
             user_song_matrix.data[user_song_matrix.indptr[i]:user_song_matrix.indptr[i+1]]=0
-    
+
     user_song_matrix.eliminate_zeros()
     mask = np.concatenate(([True], user_song_matrix.indptr[1:] != user_song_matrix.indptr[:-1]))
     user_song_matrix = sp.csc_matrix((user_song_matrix.data, user_song_matrix.indices, user_song_matrix.indptr[mask]))	
     
     return user_song_matrix.tocsr()
+
+def singular_value_decomp(matrix):
+    U, sigma, V = np.linalg.svd(matrix, 0)
+    sigma = np.diag(sigma)
+    P = U.dot(sigma)
+    return P, V
 
 if len(sys.argv) < 2:
     print("To few arguments...")
@@ -114,7 +127,7 @@ binned_play_counts = binning(play_count, bin_size)
 # to override its value
 
 # Easiest way to create a sparse matrix is done by using the vectors
-resulting_sparse_matrix = create_sparse_matrix(users, songs, play_count, row=True)
+resulting_sparse_matrix = create_sparse_matrix(users, songs, binned_play_counts, row=True)
 print("Done parsing the triplets -> Sparse matrix")
 
 shape_orig = resulting_sparse_matrix.shape
@@ -122,10 +135,14 @@ while True:
     shape_before = resulting_sparse_matrix.shape
     resulting_sparse_matrix = cold_start(resulting_sparse_matrix, min_threshold)
     shape_after = resulting_sparse_matrix.shape
-
+    print("Intermediate shape: ", shape_after)
     if shape_before[0] == shape_after[0] and shape_before[1] == shape_after[1]:
         break
 shape_final = resulting_sparse_matrix.shape
+
+# Initial P & Q values obtained using SVD
+P,Q = singular_value_decomp(resulting_sparse_matrix)
+# Perform AO using P,Q
 
 print("Orig shape: ", shape_orig, " Final shape: ", shape_after)
 sys.stdout.flush()
