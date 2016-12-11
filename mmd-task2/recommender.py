@@ -102,11 +102,17 @@ def cold_start(user_song_matrix, min_threshold):
     
     return user_song_matrix.tocsr()
 
-def singular_value_decomp(matrix):
-    U, sigma, V = np.linalg.svd(matrix, 0)
+def singular_value_decomp(sparse_matrix):
+    sparse_matrix = sparse_matrix.asfptype()
+    print("Matrix shape : ", sparse_matrix.shape)
+    # print("Sparse Matrix : ", sparse_matrix)
+    U, sigma, Vt = sp.linalg.svds(sparse_matrix)
+    print("U shape : ", U.shape, " sigma shape : ", sigma.shape, " V shape : ", V.shape)
     sigma = np.diag(sigma)
+    print("Sigma shape after converting to diagonal matrix : ", sigma.shape)
     P = U.dot(sigma)
-    return P, V
+    print("P shape : ", P.shape)
+    return P, Vt
 
 if len(sys.argv) < 2:
     print("To few arguments...")
@@ -141,7 +147,7 @@ while True:
 shape_final = resulting_sparse_matrix.shape
 
 # Initial P & Q values obtained using SVD
-# P,Q = singular_value_decomp(resulting_sparse_matrix)
+P, Q = singular_value_decomp(resulting_sparse_matrix)
 # Perform AO using P,Q
 
 print("Orig shape: ", shape_orig, " Final shape: ", shape_after)
