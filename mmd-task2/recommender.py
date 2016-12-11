@@ -210,7 +210,7 @@ shape_final = resulting_sparse_matrix.shape
 print("Picking random test set: ")
 resulting_sparse_matrix, test_set = pick_random_test_set(resulting_sparse_matrix, size_of_test_set)
 
-print("Got random test set: ", test_set)
+#print("Got random test set: ", test_set)
 
 # Initial P & Q values obtained using SVD
 Q, Pt = singular_value_decomp(resulting_sparse_matrix)
