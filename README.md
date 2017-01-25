@@ -4,6 +4,8 @@ INFO -
 CODE -
 Please go inside  mmd-task1  folder for task 1
 Please go inside  mmd-task2  folder for task 2
+Please go inside  song-rank-mmd4  folder for task 4
+
 
 HELP -
 	If you have any query, please contact us:
