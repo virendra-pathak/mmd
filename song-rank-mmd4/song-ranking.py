@@ -5,7 +5,9 @@ import os,json,glob
 
 #filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/**/*.json"
 #filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/TRAAAAW128F429D538.json"
-filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/**/*.json"
+#filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/**/*.json"
+#filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/**/*.json"
+filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_test/**/*.json"
 #filepath="C:\\Users\\Sarthak\\MMD\\group_17\\song-rank-mmd4\\lastfm_test\\A\\A\\*.json"
 
 t=0 # make it as a user defined variable
@@ -14,7 +16,8 @@ t=0 # make it as a user defined variable
 user_specified_genre = ["Hip-Hop"]
 
 max_row = 764719
-max_col = 747806
+max_col = 764719
+#max_col = 747806
 adj_matrix = sp.lil_matrix((max_row, max_col))
 M = sp.lil_matrix((max_row, max_col))
 song_tag_matrix = sp.lil_matrix((max_row, max_col))
@@ -51,32 +54,35 @@ def create_R(M, song_to_tag_map):
     # created song_in_tag_specified as all 0 
     song_in_tag_specified = np.zeros(max_row)
     summed_row = song_tag_matrix.sum(axis = 1)
-    num_songs_in_tags = summed_row.count_nonzero()
+    #num_songs_in_tags = summed_row.count_nonzero()
+    print("shape of summed_row", summed_row.shape)
+    num_songs_in_tags = np.count_nonzero(summed_row)
     value = (1-beta)/num_songs_in_tags
+    is_song_in_tag = song_tag_matrix.sum(axis=1)
     for song in range(M.shape[0]):
-        if(song_tag_matrix[song].sum > 0):
+        if is_song_in_tag[song] > 0:
             song_in_tag_specified[song] = value
 
+    R_old = np.zeros(max_row)
     for iterator in range(20):
-        
-        # using numpy allclose for convergence
+        #print("R.shape", R.shape, "M.shape", M.shape, "song_in_tag_specified.shape", song_in_tag_specified.shape) 
         R = ((beta * M) * R) + song_in_tag_specified
+        # using numpy allclose for convergence
         #if(math.abs(R_old - R) < threshold):
-        if(np.allclose(R_old - R)):
-            # stop the iteration
+        if(np.allclose(R,R_old)):
             break
         R_old = R
+    R_index = np.argsort(R)
+    print("final R", R[R_index[0]],R[R_index[1]],R[R_index[2]],R[R_index[3]],R[R_index[4]])
 
 def song_to_tag_map(dict_tag):
     
     for key, value in  dict_tag.items():
-        
-            for genres in value[1]:
-                
-                # created at the beginning of file as list
-                if(genres[0] in user_specified_genre):
-                    
-                    song_tag_matrix[value[0], user_specified_genre.index(genres[0])] = 1
+        if len(value) >= 2:    
+           for genres in value[1]:
+              # created at the beginning of file as list
+              if(genres[0] in user_specified_genre):
+                 song_tag_matrix[value[0], user_specified_genre.index(genres[0])] = 1
     
 print("Creating Similarity Matrix...")
 for filename in glob.iglob(filepath, recursive=True):
