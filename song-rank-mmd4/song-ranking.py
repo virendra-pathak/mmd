@@ -3,13 +3,21 @@ import scipy.sparse as sp
 import os,json,glob
 #import pandas as pd
 
-t=0 # make it as a user defined variable
-adj_matrix = sp.lil_matrix((764719,747806))
-M = sp.lil_matrix((764719,747806))
-song_tag_matrix = sp.lil_matrix((764719,747806))
 #filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/**/*.json"
 #filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/TRAAAAW128F429D538.json"
-filepath="C:\\Users\\Sarthak\\MMD\\group_17\\song-rank-mmd4\\lastfm_test\\A\\A\\*.json"
+filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/**/*.json"
+#filepath="C:\\Users\\Sarthak\\MMD\\group_17\\song-rank-mmd4\\lastfm_test\\A\\A\\*.json"
+
+t=0 # make it as a user defined variable
+
+#list of tags
+user_specified_genre = ["Hip-Hop"]
+
+max_row = 764719
+max_col = 747806
+adj_matrix = sp.lil_matrix((max_row, max_col))
+M = sp.lil_matrix((max_row, max_col))
+song_tag_matrix = sp.lil_matrix((max_row, max_col))
 dict_trackid_rowno = {}
 row_num = 0
 
@@ -22,22 +30,26 @@ def create_M(adj_matrix):
        song_row = adj_matrix.getrow(song)
        outgoing_edges[song] = song_row.count_nonzero()
 
-
-    non_zero_row_index = M.nonzero()[0]
-    non_zero_col_index = M.nonzero()[1]
-    for index in range(non_zero_row_index):
+    # and why we are using M.nonzero?
+    #non_zero_row_index = M.nonzero()[0]
+    #non_zero_col_index = M.nonzero()[1]
+    non_zero_row_index = adj_matrix.nonzero()[0]
+    non_zero_col_index = adj_matrix.nonzero()[1]
+    #print(non_zero_row_index.shape)
+    for index in range(len(non_zero_row_index)):
         if(adj_matrix[non_zero_row_index[index],non_zero_col_index[index]]):
             M[non_zero_col_index[index],non_zero_row_index[index]] = 1/outgoing_edges[non_zero_row_index[index]]
     
     print("M shape : ", M.shape)
+
 #write all below code in a function to make it clean
-
-
 def create_R(M, song_to_tag_map):
     beta = 0.2
-    # TODO create R vector with initial values as 1/number of songs
-    R = np.array(adj_matrix.shape[0])
-    # TODO create the vector "song_in_tag_specified" if a song i belongs to given tag, then value is 1/mod(s)
+    # created R as all value 1/num_songs at all its indexes
+    R = np.full(max_row, 1/max_row)
+
+    # created song_in_tag_specified as all 0 
+    song_in_tag_specified = np.zeros(max_row)
     summed_row = song_tag_matrix.sum(axis = 1)
     num_songs_in_tags = summed_row.count_nonzero()
     value = (1-beta)/num_songs_in_tags
@@ -47,9 +59,10 @@ def create_R(M, song_to_tag_map):
 
     for iterator in range(20):
         
-        # TODO import math class, declare a threshold, declare R_old
+        # using numpy allclose for convergence
         R = ((beta * M) * R) + song_in_tag_specified
-        if(math.abs(R_old - R) < threshold):
+        #if(math.abs(R_old - R) < threshold):
+        if(np.allclose(R_old - R)):
             # stop the iteration
             break
         R_old = R
@@ -60,7 +73,7 @@ def song_to_tag_map(dict_tag):
         
             for genres in value[1]:
                 
-                # TODO create user_specified_genre values
+                # created at the beginning of file as list
                 if(genres[0] in user_specified_genre):
                     
                     song_tag_matrix[value[0], user_specified_genre.index(genres[0])] = 1
