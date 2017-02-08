@@ -7,6 +7,7 @@ from IPython.display import clear_output
 from IPython.display import display
 import numpy as np
 import scipy.cluster as sc
+import matplotlib.pyplot as plt
 
 import itertools
 #import pandas as pd
@@ -24,7 +25,7 @@ t=0 # make it as a user defined variable
 #list of tags
 user_specified_genre = ["Hip-Hop", "classic"]
 num_eigen_vectors = 10
-num_clusters = 3
+num_clusters = 10
 #user_specified_genre = []
 
 max_row = 764719
@@ -36,6 +37,9 @@ song_tag_matrix = sp.lil_matrix((max_row, max_col))
 dict_trackid_rowno = {}
 trackID_title_dict = {}
 track_ID = []
+dict_song_tag = {}
+num_tags_arr = np.zeros(num_clusters)
+num_clusters_arr = np.zeros(num_clusters)
 
 def create_D(adj_matrix):
     print("Creating D Matrix...")
@@ -60,21 +64,52 @@ def create_D(adj_matrix):
     diagonal_matrix = diagonal_matrix.tocsr()
     dot_product = (vecs_csr.transpose().dot(laplacian)).dot(vecs_csr)
     normalized_laplacian = (diagonal_matrix.power(-1/2).dot(laplacian)).dot(diagonal_matrix.power(-1/2))
-    print("NL shape: ", normalized_laplacian.shape)
+    print("Normalized Laplacian shape: ", normalized_laplacian.shape)
     ratio_cut_NL = ((vecs_csr.transpose().dot(normalized_laplacian)).dot(vecs_csr)).diagonal().sum()
-    print("RCNL:", ratio_cut_NL)
+    print("Ratio Cut for Normalized Laplacian:", ratio_cut_NL)
     
     ratio_cut = dot_product.diagonal().sum()
-    print("ratio_cut: ", ratio_cut)
+    print("ratio_cut for laplacian: ", ratio_cut)
     
-    centroid, label = sc.vq.kmeans2(vecs, num_clusters)
+    centroid, label = sc.vq.kmeans2(vecs, num_clusters, minit='random')
     print("centroid: ", centroid.shape, " label: ", label.shape)
     
     print("label values: ", np.unique(label))
     
     for cluster in range (num_clusters):
+        #init tag_counter = 0
+        dict_tag_counter = {}
+        numtags = 0
         songs = np.where(label == cluster)
-        print("songs row:", songs)
+        print("number of songs in cluster ", cluster, " are:", len(songs[0]))
+        for song_num in np.nditer(songs):
+            #print("song_num:", song_num)
+            song_row = song_tag_matrix.getrow(song_num)
+            
+            #print("song_row shape:", song_row.shape)
+            tags = np.nonzero(song_row)[1]
+            #print("tags: ", tags)
+            
+            if(len(tags) > 0):
+                for tag in np.nditer(tags):
+                    #print("tag: ", tag)
+                    if not np.asscalar(tag) in dict_tag_counter:
+                        dict_tag_counter[np.asscalar(tag)] = 1
+                    else:
+                        
+                        dict_tag_counter[np.asscalar(tag)] = dict_tag_counter[np.asscalar(tag)] + 1
+        numtags = sum(dict_tag_counter.values())
+        
+        num_tags_arr[cluster] = numtags
+        num_clusters_arr[cluster] = cluster
+        print("tags ", numtags, " occured in cluster: ", cluster)
+        #print("songs row:", songs)
+    print("num_tags ", num_tags_arr, " num_clusters ", num_clusters_arr)
+    plt.bar(num_clusters_arr,num_tags_arr,align='center') # A bar chart
+    plt.xlabel('Cluster')
+    plt.ylabel('Tags')
+    
+    plt.show()
     
 def create_M(adj_matrix):
     start_time = time.time()
@@ -149,14 +184,16 @@ def song_to_tag_map(dict_tag):
         if len(value) >= 2:    
            for genres in value[1]:
               # created at the beginning of file as list
-              if(genres[0] in user_specified_genre):
-                 song_tag_matrix[value[0], user_specified_genre.index(genres[0])] = 1
+              #if(genres[0] in user_specified_genre):
+              song_tag_matrix[value[0], dict_song_tag[genres[0]]] = 1
+             #print("RAM",genres[0])
     
     print("Time taken for creating song to tag map: ", time.time() - start_time)
 def create_similarty_matrix():
     start_time = time.time()
     print("Creating Similarity Matrix...")
     row_num = 0
+    tag_num = 0
     for filename in glob.iglob(filepath, recursive=True):
         #print(filename)
         #assumption 1 jason file contain only one line
@@ -170,6 +207,11 @@ def create_similarty_matrix():
                 track_ID.insert(row_num, data['track_id'])  
                 row_num += 1
                 dict_trackid_rowno[data['track_id']] += [data['tags']]
+                for tag in data['tags']:
+                    if tag[0] not in dict_song_tag:
+                       dict_song_tag[tag[0]] = tag_num
+                       tag_num = tag_num + 1
+                       #print("VKP", tag[0])
                 row = dict_trackid_rowno[data['track_id']][0]
                 for similar in data['similars']:
                     if similar[0] not in dict_trackid_rowno:
@@ -184,6 +226,9 @@ def create_similarty_matrix():
                      
                     if(similar[1] > adj_matrix[col,row]):
                         adj_matrix[row,col] = similar[1]
+                        adj_matrix[col,row] = similar[1]
+                    else:
+                        adj_matrix[row,col] = adj_matrix[col,row]
     print("Time taken for creating similarity matrix: ", time.time() - start_time)
 			#print(row, col, similar[1])
 
@@ -191,11 +236,11 @@ def create_similarty_matrix():
 #print("track ID array: ", track_ID)
 start_time = time.time()
 create_similarty_matrix()
-
+song_to_tag_map(dict_trackid_rowno)
 create_D(adj_matrix)
 #create_M(adj_matrix)
 
-#song_to_tag_map(dict_trackid_rowno)
+
 #create_R(M, song_to_tag_map)
 end_time = time.time()
 
