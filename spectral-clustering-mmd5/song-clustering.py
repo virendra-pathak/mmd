@@ -1,21 +1,31 @@
-import numpy as np
 import scipy.sparse as sp
 import os,json,glob
 import time
+from ipywidgets import interact, interactive, fixed
+import ipywidgets as widgets
+from IPython.display import clear_output
+from IPython.display import display
+import numpy as np
+import scipy.cluster as sc
+
+import itertools
 #import pandas as pd
 
 #filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/**/*.json"
 #filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/TRAAAAW128F429D538.json"
 #filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/A/A/A/**/*.json"
-#filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_subset/**/*.json"
-#filepath="C:\\Users\\Sarthak\\MMD\\group_17\\song-rank-mmd4\\lastfm_test\\**\\*.json"
+#filepath="/media/virendra/data/study/1sem/mmd/rank/lastfm_test/**/*.json"
+filepath="C:\\Users\\Sarthak\\MMD\\group_17\\song-rank-mmd4\\lastfm_subset\\**\\*.json"
 #filepath="C:\\Users\\Sarthak\\MMD\\group_17\\song-rank-mmd4\\lastfm_test\\A\\A\\*.json"
-filepath="C:\\Users\\Sarthak\\MMD\\group_17\\song-rank-mmd4\\lastfm_test\\**\\*.json"
+#filepath="C:\\Users\\Sarthak\\MMD\\group_17\\song-rank-mmd4\\lastfm_test\\**\\*.json"
 
 t=0 # make it as a user defined variable
 
 #list of tags
 user_specified_genre = ["Hip-Hop", "classic"]
+num_eigen_vectors = 10
+num_clusters = 3
+#user_specified_genre = []
 
 max_row = 764719
 max_col = 764719
@@ -27,7 +37,45 @@ dict_trackid_rowno = {}
 trackID_title_dict = {}
 track_ID = []
 
-
+def create_D(adj_matrix):
+    print("Creating D Matrix...")
+    row_sum_list = adj_matrix.sum(axis=1)  
+    row_sum_list = np.array(row_sum_list)
+    row_sum_list = row_sum_list.transpose()
+    row_sum_list = row_sum_list[0]
+    #print("row_sum_list shape: ", list(chain), " values: ", row_sum_list[0:5, :])
+    
+    diagonal_matrix = sp.diags(row_sum_list)
+    print("diagonal_matrix shape:", diagonal_matrix.shape)
+    
+    laplacian = diagonal_matrix - adj_matrix
+    print("laplacian shape: ", laplacian.shape)
+    
+    vals, vecs = sp.linalg.eigsh(laplacian, num_eigen_vectors)
+    print("num values: ", vals.shape, " and eigen vectors: ", vecs.shape)
+    
+    #print("eigen vectors shape: ", vecs.shape)
+    vecs_csr = sp.csr_matrix(vecs)
+    laplacian = laplacian.tocsr()
+    diagonal_matrix = diagonal_matrix.tocsr()
+    dot_product = (vecs_csr.transpose().dot(laplacian)).dot(vecs_csr)
+    normalized_laplacian = (diagonal_matrix.power(-1/2).dot(laplacian)).dot(diagonal_matrix.power(-1/2))
+    print("NL shape: ", normalized_laplacian.shape)
+    ratio_cut_NL = ((vecs_csr.transpose().dot(normalized_laplacian)).dot(vecs_csr)).diagonal().sum()
+    print("RCNL:", ratio_cut_NL)
+    
+    ratio_cut = dot_product.diagonal().sum()
+    print("ratio_cut: ", ratio_cut)
+    
+    centroid, label = sc.vq.kmeans2(vecs, num_clusters)
+    print("centroid: ", centroid.shape, " label: ", label.shape)
+    
+    print("label values: ", np.unique(label))
+    
+    for cluster in range (num_clusters):
+        songs = np.where(label == cluster)
+        print("songs row:", songs)
+    
 def create_M(adj_matrix):
     start_time = time.time()
     print("Creating M Matrix...")
@@ -132,23 +180,23 @@ def create_similarty_matrix():
 
     			# what we have to store is adj_matirx? 1 or similar value?
 			# if its only 1/0 => just use a additional if (similar[1] > t)
-                    if(similar[1] >= t):
+                    
                      
-                        adj_matrix[row,col] = 1 
+                    if(similar[1] > adj_matrix[col,row]):
+                        adj_matrix[row,col] = similar[1]
     print("Time taken for creating similarity matrix: ", time.time() - start_time)
 			#print(row, col, similar[1])
 
 
 #print("track ID array: ", track_ID)
-
 start_time = time.time()
 create_similarty_matrix()
 
-create_M(adj_matrix)
+create_D(adj_matrix)
+#create_M(adj_matrix)
 
-song_to_tag_map(dict_trackid_rowno)
-
-create_R(M, song_to_tag_map)
+#song_to_tag_map(dict_trackid_rowno)
+#create_R(M, song_to_tag_map)
 end_time = time.time()
 
 print("time taken : ", end_time - start_time)
